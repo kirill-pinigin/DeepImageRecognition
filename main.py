@@ -20,7 +20,7 @@ parser.add_argument('--activation',        type = str,   default='LeakyReLU', he
 parser.add_argument('--criterion',         type = str,   default='BCE', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
 parser.add_argument('--type_norm',         type = str,   default='batch', help='type of optimizer')
-parser.add_argument('--lr',                type = float, default=1e-4)
+parser.add_argument('--lr',                type = float, default=1e-5)
 parser.add_argument('--weight_decay',      type = float, default=0)
 parser.add_argument('--dropout',           type = float, default=0.0)
 parser.add_argument('--batch_size',        type = int,   default=16)

@@ -138,7 +138,7 @@ class DeepImageRecognition(object):
                 for param_group in self.optimizer.param_groups:
                     lr = param_group['lr']
                     if lr >= LR_THRESHOLD:
-                        param_group['lr'] = lr * 0.5
+                        param_group['lr'] = lr * 0.2
                         print('! Decrease LearningRate !', lr)
 
                 probas = self.recognitron.get_dropout()
