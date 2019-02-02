@@ -22,12 +22,12 @@ parser.add_argument('--optimizer',         type = str,   default='Adam', help='t
 parser.add_argument('--type_norm',         type = str,   default='batch', help='type of optimizer')
 parser.add_argument('--lr',                type = float, default=1e-4)
 parser.add_argument('--weight_decay',      type = float, default=0)
-parser.add_argument('--split',             type = float, default=0.0)
-parser.add_argument('--batch_size',        type = int,   default=32)
+parser.add_argument('--dropout',           type = float, default=0.0)
+parser.add_argument('--batch_size',        type = int,   default=16)
 parser.add_argument('--epochs',            type = int,   default=64)
 parser.add_argument('--pretrained',        type = bool,  default=True)
-parser.add_argument('--transfer',          type = bool,  default=True)
-parser.add_argument('--resume_train',      type = bool,  default=False)
+parser.add_argument('--transfer',          type = bool,  default=False)
+parser.add_argument('--resume_train',      type = bool,  default=True)
 
 args = parser.parse_args()
 
@@ -64,7 +64,7 @@ model = (recognitron_types[args.recognitron] if args.recognitron in recognitron_
 function = (activation_types[args.activation] if args.activation in activation_types else activation_types['ReLU'])
 
 recognitron = model(dimension=DIMENSION , channels=CHANNELS, activation=function,
-                    pretrained=args.pretrained + args.transfer_learning + args.fine_tuning)
+                    pretrained=args.pretrained + args.transfer)
 
 optimizer =(optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr, weight_decay = args.weight_decay)
 
@@ -104,10 +104,10 @@ testloader =  torch.utils.data.DataLoader(image_datasets['val'], batch_size=1, s
 framework = DeepImageRecognition(recognitron = recognitron, criterion = criterion, optimizer = optimizer, directory = args.result_dir)
 
 if args.transfer:
-    framework.predictor.freeze()
-    framework.optimizer = (optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(predictor.parameters(), lr = args.lr / 2)
+    framework.recognitron.freeze()
+    framework.optimizer = (optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr / 2)
     framework.approximate(dataloaders=dataloaders, num_epochs= int(args.epochs / 2) if int(args.epochs / 2) < 12 else 12, resume_train=args.resume_train, dropout_factor=args.dropout)
-    framework.predictor.unfreeze()
+    framework.recognitron.unfreeze()
 
 framework.approximate(dataloaders = dataloaders, num_epochs=args.epochs, resume_train=args.resume_train, dropout_factor=args.dropout)
 framework.evaluate(testloader)

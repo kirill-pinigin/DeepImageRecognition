@@ -20,7 +20,6 @@ class DeepImageRecognition(object):
     def __init__(self, recognitron,  criterion, optimizer, directory):
         self.recognitron = recognitron
         self.criterion = criterion
-        self.accuracy = torch.nn.L1Loss()
         self.optimizer = optimizer
         self.use_gpu = torch.cuda.is_available()
         self.dispersion = 1.0
@@ -66,7 +65,7 @@ class DeepImageRecognition(object):
         if resume_train and os.path.isfile(path + '_BestRecognitron.pth'):
             print( "RESUME training load Bestrecognitron")
             self.recognitron.load_state_dict(torch.load(path + '_BestRecognitron.pth'))
-            self.dispersion = dataloaders['train'].dataset.std
+
         since = time.time()
         best_loss = 10000.0
         best_acc = 0.0
@@ -102,15 +101,14 @@ class DeepImageRecognition(object):
                     self.optimizer.zero_grad()
 
                     outputs = self.recognitron(inputs)
-                    diff = self.accuracy(outputs, targets)
-                    diff = float(1.0) - diff
+                    diff = torch.abs(targets.data - torch.round(outputs.data))
                     loss = self.criterion(outputs, targets)
                     if phase == 'train':
                         loss.backward()
                         self.optimizer.step()
 
                     running_loss += loss.item() * inputs.size(0)
-                    running_corrects += diff.item() * inputs.size(0)
+                    running_corrects += (1.0 - torch.sum(diff) / float(diff.shape[1] * diff.shape[0])) * inputs.size(0)
 
                 epoch_loss = float(running_loss) / float(len(dataloaders[phase].dataset))
                 epoch_acc = float(running_corrects) / float(len(dataloaders[phase].dataset))
@@ -190,13 +188,14 @@ class DeepImageRecognition(object):
                 inputs, targets = Variable(inputs), Variable(targets)
 
             outputs = self.recognitron(inputs)
-            diff = self.accuracy(outputs, targets)
-            diff = float(1.0) - diff
+            diff = torch.abs(targets.data - torch.round(outputs.data))
             loss = self.criterion(outputs, targets)
+            if phase == 'train':
+                loss.backward()
+                self.optimizer.step()
+
             running_loss += loss.item() * inputs.size(0)
-            running_corrects += diff.item() * inputs.size(0)
-            #print('output = ', float(outputs.item()), 'targets = ', float(targets.item()))
-            #print('diff = ', float(diff.item()))
+            running_corrects += (1.0 - torch.sum(diff) / float(diff.shape[1] * diff.shape[0])) * inputs.size(0)
 
 
             if isSaveImages and test_loader.batch_size == 1:
