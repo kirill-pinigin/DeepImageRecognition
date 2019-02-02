@@ -144,6 +144,7 @@ class ResidualRecognitron(nn.Module):
             nn.Dropout(p=0),
             activation,
             Perceptron(LATENT, dimension),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -162,13 +163,13 @@ class ResidualRecognitron(nn.Module):
         return x
 
     def freeze(self):
-        for param in self.model.parameters():
+        for param in self.parameters():
             param.requires_grad = False
-        for param in self.model.fc.parameters():
+        for param in self.recognitron.parameters():
             param.requires_grad = True
 
     def unfreeze(self):
-        for param in self.model.parameters():
+        for param in self.parameters():
             param.requires_grad = True
 
     def get_dropout(self):
