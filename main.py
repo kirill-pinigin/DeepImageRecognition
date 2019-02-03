@@ -15,13 +15,13 @@ from MobileRecognitron import MobileRecognitron
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir',          type = str,   default='./CocoDatasetTags/', help='path to dataset')
 parser.add_argument('--result_dir',        type = str,   default='./RESULTS/', help='path to result')
-parser.add_argument('--recognitron',       type = str,   default='MobileRecognitron', help='type of image generator')
-parser.add_argument('--activation',        type = str,   default='ReLU', help='type of activation')
+parser.add_argument('--recognitron',       type = str,   default='ResidualRecognitron', help='type of image generator')
+parser.add_argument('--activation',        type = str,   default='LeakyReLU', help='type of activation')
 parser.add_argument('--criterion',         type = str,   default='BCE', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
 parser.add_argument('--type_norm',         type = str,   default='batch', help='type of optimizer')
-parser.add_argument('--lr',                type = float, default=1e-4)
-parser.add_argument('--weight_decay',      type = float, default=0)
+parser.add_argument('--lr',                type = float, default=1e-3)
+parser.add_argument('--weight_decay',      type = float, default=1e-3)
 parser.add_argument('--dropout',           type = float, default=0.0)
 parser.add_argument('--batch_size',        type = int,   default=16)
 parser.add_argument('--epochs',            type = int,   default=64)
@@ -105,7 +105,7 @@ framework = DeepImageRecognition(recognitron = recognitron, criterion = criterio
 
 if args.transfer:
     framework.recognitron.freeze()
-    framework.optimizer = (optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr / 2)
+    framework.optimizer = (optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr / 2, weight_decay = args.weight_decay)
     framework.approximate(dataloaders=dataloaders, num_epochs= int(args.epochs / 2) if int(args.epochs / 2) < 12 else 12, resume_train=args.resume_train, dropout_factor=args.dropout)
     framework.recognitron.unfreeze()
 

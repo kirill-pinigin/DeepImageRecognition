@@ -62,7 +62,7 @@ class DeepImageRecognition(object):
 
     def approximate(self, dataloaders, num_epochs = 20, resume_train = False, dropout_factor=0):
         path = self.modelPath +"/"+ str(self.recognitron.__class__.__name__) +  str(self.recognitron.activation.__class__.__name__)
-        if resume_train and os.path.isfile(path + '_BestRecognitron.pth'):
+        if resume_train and os.path.isfile(path + '_Best.pth'):
             print( "RESUME training load Bestrecognitron")
             self.recognitron.load_state_dict(torch.load(path + '_BestRecognitron.pth'))
 
@@ -129,10 +129,10 @@ class DeepImageRecognition(object):
                     degradation = 0
                     best_acc = epoch_acc
                     print('curent best_acc ', best_acc)
-                    self.save('BestRecognitron')
+                    self.save('Best')
                 else:
                     counter += 1
-                    self.save('RegularRecognitron')
+                    self.save('Regular')
 
             if counter > TRYING_LR * 2:
                 for param_group in self.optimizer.param_groups:
@@ -167,7 +167,7 @@ class DeepImageRecognition(object):
             self.recognitron.load_state_dict(torch.load(modelPath))
             print('load Recognitron model')
         else:
-            self.recognitron.load_state_dict(torch.load(self.modelPath +"/"+ str(self.recognitron.__class__.__name__) +  str(self.recognitron.activation.__class__.__name__) + '_BestRecognitron.pth'))
+            self.recognitron.load_state_dict(torch.load(self.modelPath +"/"+ str(self.recognitron.__class__.__name__) +  str(self.recognitron.activation.__class__.__name__) + '_Best.pth'))
             print('load BestRecognitron ')
         print(len(test_loader.dataset))
         i = 0
