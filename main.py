@@ -16,17 +16,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir',          type = str,   default='./CocoDatasetTags/', help='path to dataset')
 parser.add_argument('--result_dir',        type = str,   default='./RESULTS/', help='path to result')
 parser.add_argument('--recognitron',       type = str,   default='MobileRecognitron', help='type of image generator')
-parser.add_argument('--activation',        type = str,   default='LeakyReLU', help='type of activation')
+parser.add_argument('--activation',        type = str,   default='ReLU', help='type of activation')
 parser.add_argument('--criterion',         type = str,   default='BCE', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
 parser.add_argument('--type_norm',         type = str,   default='batch', help='type of optimizer')
-parser.add_argument('--lr',                type = float, default=1e-5)
+parser.add_argument('--lr',                type = float, default=1e-4)
 parser.add_argument('--weight_decay',      type = float, default=0)
 parser.add_argument('--dropout',           type = float, default=0.0)
 parser.add_argument('--batch_size',        type = int,   default=16)
 parser.add_argument('--epochs',            type = int,   default=64)
 parser.add_argument('--pretrained',        type = bool,  default=True)
-parser.add_argument('--transfer',          type = bool,  default=False)
+parser.add_argument('--transfer',          type = bool,  default=True)
 parser.add_argument('--resume_train',      type = bool,  default=True)
 
 args = parser.parse_args()
@@ -74,8 +74,8 @@ train_transforms_list = [
         transforms.RandomHorizontalFlip(),
         transforms.RandomAffine(degrees=(-30, 30), scale=(0.9, 1.1), resample=Image.BICUBIC),
         transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
-        transforms.Resize((int(IMAGE_SIZE * 1.055), int(IMAGE_SIZE * 1.055)), interpolation=3),
-        transforms.RandomCrop((IMAGE_SIZE, IMAGE_SIZE)),
+        transforms.Resize((int(IMAGE_SIZE * 1), int(IMAGE_SIZE * 1)), interpolation=3),
+        #transforms.RandomCrop((IMAGE_SIZE, IMAGE_SIZE)),
         transforms.ToTensor(),
         ]
 

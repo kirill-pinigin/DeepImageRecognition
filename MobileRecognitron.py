@@ -164,7 +164,7 @@ class MobileRecognitron(nn.Module):
 
         self.recognitron = nn.Sequential(
             Perceptron(1280, 1280),
-            nn.Dropout(p=0),
+            nn.Dropout(p=0.5),
             activation,
             Perceptron( 1280, dimension),
             nn.Sigmoid(),

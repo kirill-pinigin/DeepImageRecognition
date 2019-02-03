@@ -190,9 +190,6 @@ class DeepImageRecognition(object):
             outputs = self.recognitron(inputs)
             diff = torch.abs(targets.data - torch.round(outputs.data))
             loss = self.criterion(outputs, targets)
-            if phase == 'train':
-                loss.backward()
-                self.optimizer.step()
 
             running_loss += loss.item() * inputs.size(0)
             running_corrects += (1.0 - torch.sum(diff) / float(diff.shape[1] * diff.shape[0])) * inputs.size(0)

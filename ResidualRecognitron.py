@@ -141,7 +141,7 @@ class ResidualRecognitron(nn.Module):
 
         self.recognitron = nn.Sequential(
             Perceptron(LATENT, LATENT),
-            nn.Dropout(p=0),
+            nn.Dropout(p=0.5),
             activation,
             Perceptron(LATENT, dimension),
             nn.Sigmoid(),

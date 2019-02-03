@@ -111,7 +111,7 @@ class SqueezeSimpleRecognitron(nn.Module):
                         init.constant(m.bias, 0)
 
         self.recognitron = nn.Sequential(
-            nn.Dropout(p=0),
+            nn.Dropout(p=0.5),
             nn.Conv2d(LATENT_DIM, dimension, kernel_size=1),
             final_norm_layer,
             activation,
@@ -183,7 +183,7 @@ class SqueezeResidualRecognitron(SqueezeSimpleRecognitron):
 
         self.recognitron = nn.Sequential(
             Perceptron(LATENT_DIM, sub_dimension),
-            nn.Dropout(p=0),
+            nn.Dropout(p=0.5),
             activation,
             Perceptron(sub_dimension, dimension),
             nn.Sigmoid(),
