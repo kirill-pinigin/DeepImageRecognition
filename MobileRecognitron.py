@@ -5,6 +5,8 @@ from DeepImageRecognition import IMAGE_SIZE
 
 import math
 
+LATENT_SPACE = 512
+
 def conv_bn(inp, oup, stride , activation = nn.ReLU()):
     return nn.Sequential(
         nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
@@ -81,7 +83,6 @@ class MobileNetV2(nn.Module):
         self.features.append(nn.AvgPool2d(input_size // 32))
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
-
         # building classifier
         self.classifier = nn.Sequential(
             nn.Dropout(),
@@ -159,14 +160,17 @@ class MobileRecognitron(nn.Module):
                 m.conv[2] = activation
                 m.conv[5] = activation
 
-        self.features =base_model
+        self.features = base_model
         self.features[0][0]= conv
+        self.features[0][18] = InvertedResidual(320, 512, 2, 6, activation)
+        self.features[0][19] = conv_1x1_bn(512, 512)
+        self.features[0].add_module('final_avg', nn.AvgPool2d(IMAGE_SIZE // 64))
 
         self.recognitron = nn.Sequential(
-            Perceptron(1280, 1280),
+            Perceptron(512, 512),
             nn.Dropout(p=0.5),
             activation,
-            Perceptron( 1280, dimension),
+            Perceptron( 512, dimension),
             nn.Sigmoid(),
         )
 

@@ -64,7 +64,7 @@ class DeepImageRecognition(object):
         path = self.modelPath +"/"+ str(self.recognitron.__class__.__name__) +  str(self.recognitron.activation.__class__.__name__)
         if resume_train and os.path.isfile(path + '_Best.pth'):
             print( "RESUME training load Bestrecognitron")
-            self.recognitron.load_state_dict(torch.load(path + '_BestRecognitron.pth'))
+            self.recognitron.load_state_dict(torch.load(path + '_Best.pth'))
 
         since = time.time()
         best_loss = 10000.0
