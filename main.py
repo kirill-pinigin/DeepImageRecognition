@@ -15,7 +15,7 @@ from MobileRecognitron import MobileRecognitron
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir',          type = str,   default='./CocoDatasetTags/', help='path to dataset')
 parser.add_argument('--result_dir',        type = str,   default='./RESULTS/', help='path to result')
-parser.add_argument('--recognitron',       type = str,   default='ResidualRecognitron', help='type of image generator')
+parser.add_argument('--recognitron',       type = str,   default='MobileRecognitron', help='type of image generator')
 parser.add_argument('--activation',        type = str,   default='LeakyReLU', help='type of activation')
 parser.add_argument('--criterion',         type = str,   default='BCE', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
@@ -26,7 +26,7 @@ parser.add_argument('--dropout',           type = float, default=0.0)
 parser.add_argument('--batch_size',        type = int,   default=32)
 parser.add_argument('--epochs',            type = int,   default=64)
 parser.add_argument('--pretrained',        type = bool,  default=True)
-parser.add_argument('--transfer',          type = bool,  default=True)
+parser.add_argument('--transfer',          type = bool,  default=False)
 parser.add_argument('--resume_train',      type = bool,  default=True)
 
 args = parser.parse_args()
@@ -59,7 +59,7 @@ optimizer_types =   {
                         'SGD'    : optim.SGD
                     }
 
-model = (recognitron_types[args.recognitron] if args.recognitron in recognitron_types else recognitron_types['ResidualRecognitron'])
+model = (recognitron_types[args.recognitron] if args.recognitron in recognitron_types else recognitron_types['MobileRecognitron'])
 
 function = (activation_types[args.activation] if args.activation in activation_types else activation_types['ReLU'])
 
@@ -68,7 +68,7 @@ recognitron = model(dimension=DIMENSION , channels=CHANNELS, activation=function
 
 optimizer =(optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr, weight_decay = args.weight_decay)
 
-criterion = (criterion_types[args.criterion] if args.criterion in criterion_types else criterion_types['MSE'])
+criterion = (criterion_types[args.criterion] if args.criterion in criterion_types else criterion_types['BCE'])
 
 train_transforms_list = [
         transforms.RandomHorizontalFlip(),
@@ -93,8 +93,7 @@ print(data_transforms)
 
 shuffle_list = { 'train' : True, 'val' : False}
 
-image_datasets = {x: CustomDataset(os.path.join(args.data_dir, x), os.path.join(args.data_dir, x+'_tags.csv'), CHANNELS,
-                                          data_transforms[x])
+image_datasets = {x: CustomDataset(os.path.join(args.data_dir, x), CHANNELS, data_transforms[x], os.path.join(args.data_dir, x + '_tags.csv'))
                   for x in ['train', 'val']}
 
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=args.batch_size,shuffle=shuffle_list[x], num_workers=4)  for x in ['train', 'val']}
@@ -102,7 +101,7 @@ dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=args
 testloader =  torch.utils.data.DataLoader(image_datasets['val'], batch_size=1, shuffle=False, num_workers=4)
 
 framework = DeepImageRecognition(recognitron = recognitron, criterion = criterion, optimizer = optimizer, directory = args.result_dir)
-
+framework.save("FAKE")
 if args.transfer:
     framework.recognitron.freeze()
     framework.optimizer = (optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr / 2, weight_decay = args.weight_decay)

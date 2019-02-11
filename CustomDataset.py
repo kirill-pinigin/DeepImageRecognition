@@ -20,12 +20,11 @@ def load_image(filepath, channels = 3):
         image = Image.open(filepath).convert('RGB')
     return image
 
-def CustomDataset(dir, csv_path, channels, transforms):
-    return CSVDataset(dir, csv_path, channels, transforms)
-
-def CustomDataset(dir, channels, transforms):
-    return FolderDataset(dir, channels, transforms)
-
+def CustomDataset(dir, channels, transforms, csv_path = None):
+    if csv_path is None:
+        return FolderDataset(dir, channels, transforms)
+    else:
+        return CSVDataset(dir=dir, csv_path=csv_path, channels=channels, transforms=transforms)
 
 class CSVDataset(Dataset):
     def __init__(self, dir, csv_path, channels, transforms):

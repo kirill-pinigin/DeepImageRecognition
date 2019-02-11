@@ -99,9 +99,9 @@ class DeepImageRecognition(object):
                     else:
                         inputs, targets = Variable(inputs), Variable(targets)
                     self.optimizer.zero_grad()
-
                     outputs = self.recognitron(inputs)
                     diff = torch.abs(targets.data - torch.round(outputs.data))
+
                     loss = self.criterion(outputs, targets)
                     if phase == 'train':
                         loss.backward()
@@ -223,6 +223,7 @@ class DeepImageRecognition(object):
     def save(self, model):
         self.recognitron = self.recognitron.cpu()
         self.recognitron.eval()
+        self.recognitron.train(False)
         x = Variable(torch.zeros(1, CHANNELS, IMAGE_SIZE, IMAGE_SIZE))
         path = self.modelPath +"/"+ str(self.recognitron.__class__.__name__ ) +  str(self.recognitron.activation.__class__.__name__)
         torch_out = torch.onnx._export(self.recognitron, x, path + "_" + model + ".onnx", export_params=True)
