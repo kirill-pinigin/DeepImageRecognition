@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torchvision.transforms as transforms
-from  CSVDataset import  CSVDataset
+from  CustomDataset import  CustomDataset
 from PIL import Image
 from DeepImageRecognition import DeepImageRecognition ,MultiLabelLoss,  IMAGE_SIZE, CHANNELS, DIMENSION
 from NeuralModels import SILU, Perceptron
@@ -20,10 +20,10 @@ parser.add_argument('--activation',        type = str,   default='LeakyReLU', he
 parser.add_argument('--criterion',         type = str,   default='BCE', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
 parser.add_argument('--type_norm',         type = str,   default='batch', help='type of optimizer')
-parser.add_argument('--lr',                type = float, default=1e-3)
+parser.add_argument('--lr',                type = float, default=1e-4)
 parser.add_argument('--weight_decay',      type = float, default=1e-3)
 parser.add_argument('--dropout',           type = float, default=0.0)
-parser.add_argument('--batch_size',        type = int,   default=16)
+parser.add_argument('--batch_size',        type = int,   default=32)
 parser.add_argument('--epochs',            type = int,   default=64)
 parser.add_argument('--pretrained',        type = bool,  default=True)
 parser.add_argument('--transfer',          type = bool,  default=True)
@@ -93,7 +93,7 @@ print(data_transforms)
 
 shuffle_list = { 'train' : True, 'val' : False}
 
-image_datasets = {x: CSVDataset(os.path.join(args.data_dir, x), os.path.join(args.data_dir, x+'_tags.csv'), CHANNELS,
+image_datasets = {x: CustomDataset(os.path.join(args.data_dir, x), os.path.join(args.data_dir, x+'_tags.csv'), CHANNELS,
                                           data_transforms[x])
                   for x in ['train', 'val']}
 
