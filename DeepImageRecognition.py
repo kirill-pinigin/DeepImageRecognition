@@ -7,7 +7,7 @@ import torchvision
 import numpy as np
 
 IMAGE_SIZE = 256
-CHANNELS = 1
+CHANNELS = 3
 DIMENSION = 80
 
 LR_THRESHOLD = 1e-7
@@ -16,16 +16,36 @@ DEGRADATION_TOLERANCY = 7
 ACCURACY_TRESHOLD = float(0.0625)
 
 
+class JacardAccuracy(torch.nn.Module):
+    def __init__(self):
+        super(JacardAccuracy, self).__init__()
+
+    def forward(self, actual, desire):
+        smooth = 1e-6
+        actual = torch.round(actual)
+        length = actual.size(0)
+        m1 = actual.view(length, -1)  # Flatten
+        m2 = desire.view(length, -1)  # Flatten
+        intersection = (m1 * m2).sum()
+        union = m1.sum() + m2.sum() - intersection
+        return (intersection + smooth) / (union + smooth)
+
+
 class DeepImageRecognition(object):
     def __init__(self, recognitron,  criterion, optimizer, directory):
         self.recognitron = recognitron
         self.criterion = criterion
+        self.accuracy = JacardAccuracy()
         self.optimizer = optimizer
         self.use_gpu = torch.cuda.is_available()
         self.dispersion = 1.0
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.cudas = list(range(torch.cuda.device_count()))
         config = str(recognitron.__class__.__name__) + '_' + str(recognitron.activation.__class__.__name__) #+ '_' + str(recognitron.norm1.__class__.__name__)
         config += '_' + str(criterion.__class__.__name__)
-        config += "_" + str(optimizer.__class__.__name__) #+ "_lr_" + str( optimizer.param_groups[0]['lr'])
+        config += "_" + str(optimizer.__class__.__name__)
+        print(self.device)
+        print(torch.cuda.device_count())
 
         reportPath = os.path.join(directory, config + "/report/")
         flag = os.path.exists(reportPath)
@@ -54,8 +74,7 @@ class DeepImageRecognition(object):
         print(criterion)
         self.report.flush()
         sys.stdout = _stdout
-        if self.use_gpu :
-            self.recognitron = self.recognitron.cuda()
+        self.recognitron = self.recognitron.to(self.device)
 
     def __del__(self):
         self.report.close()
@@ -84,6 +103,7 @@ class DeepImageRecognition(object):
             print('-' * 10)
 
             for phase in ['train', 'val']:
+
                 if phase == 'train':
                     self.recognitron.train(True)
                 else:
@@ -91,24 +111,24 @@ class DeepImageRecognition(object):
 
                 running_loss = 0.0
                 running_corrects = 0
+
                 for data in dataloaders[phase]:
                     inputs, targets = data
-                    if self.use_gpu:
-                        inputs = Variable(inputs.cuda())
-                        targets = Variable(targets.cuda())
-                    else:
-                        inputs, targets = Variable(inputs), Variable(targets)
-                    self.optimizer.zero_grad()
-                    outputs = self.recognitron(inputs)
-                    diff = torch.abs(targets.data - torch.round(outputs.data))
 
+                    inputs = Variable(inputs.to(self.device))
+                    targets = Variable(targets.to(self.device))
+
+                    self.optimizer.zero_grad()
+                    outputs = torch.nn.parallel.data_parallel(module=self.recognitron, inputs=inputs, device_ids=self.cudas)
                     loss = self.criterion(outputs, targets)
+                    acc = self.accuracy(outputs, targets)
+
                     if phase == 'train':
                         loss.backward()
                         self.optimizer.step()
 
                     running_loss += loss.item() * inputs.size(0)
-                    running_corrects += (1.0 - torch.sum(diff) / float(diff.shape[1] * diff.shape[0])) * inputs.size(0)
+                    running_corrects += acc.item() * inputs.size(0)
 
                 epoch_loss = float(running_loss) / float(len(dataloaders[phase].dataset))
                 epoch_acc = float(running_corrects) / float(len(dataloaders[phase].dataset))
@@ -161,7 +181,7 @@ class DeepImageRecognition(object):
         return best_acc
 
 
-    def evaluate(self, test_loader, isSaveImages = True, modelPath=None):
+    def estimate(self, test_loader, modelPath=None):
         counter = 0
         if modelPath is not None:
             self.recognitron.load_state_dict(torch.load(modelPath))
@@ -174,41 +194,22 @@ class DeepImageRecognition(object):
         since = time.time()
         self.recognitron.train(False)
         self.recognitron.eval()
-        if self.use_gpu:
-            self.recognitron = self.recognitron.cuda()
+        self.recognitron.to(self.device)
+
         running_loss = 0.0
         running_corrects = 0
+
         for data in test_loader:
             inputs, targets = data
-
-            if self.use_gpu:
-                inputs = Variable(inputs.cuda())
-                targets = Variable(targets.cuda())
-            else:
-                inputs, targets = Variable(inputs), Variable(targets)
+            inputs = Variable(inputs.to(self.device))
+            targets = Variable(targets.to(self.device))
 
             outputs = self.recognitron(inputs)
             diff = torch.abs(targets.data - torch.round(outputs.data))
             loss = self.criterion(outputs, targets)
-
+            acc = self.accuracy(outputs, targets)
             running_loss += loss.item() * inputs.size(0)
-            running_corrects += (1.0 - torch.sum(diff) / float(diff.shape[1] * diff.shape[0])) * inputs.size(0)
-
-
-            if isSaveImages and test_loader.batch_size == 1:
-                result = torch.round(outputs).data.cpu().numpy()
-                result = np.squeeze(result)
-                indexes = np.nonzero(result)
-                image = inputs.clone()
-                image = image.data.cpu().float()
-                counter = counter + 1
-                if float(diff.item()) > 0.5:
-                    filename = self.images + '/bad/'
-                else:
-                    filename = self.images + '/good/'
-
-                filename+= str(counter) + "__" + str(float(diff.item()))+'__.png'
-                #torchvision.utils.save_image(image, filename)
+            running_corrects += acc.item() * inputs.size(0)
 
         epoch_loss = float(running_loss) / float(len(test_loader.dataset))
         epoch_acc = float(running_corrects) / float(len(test_loader.dataset))
@@ -222,8 +223,8 @@ class DeepImageRecognition(object):
 
     def save(self, model):
         self.recognitron = self.recognitron.cpu()
-        self.recognitron.eval()
-        self.recognitron.train(False)
+        #self.recognitron.eval()
+        #self.recognitron.train(False)
         x = Variable(torch.zeros(1, CHANNELS, IMAGE_SIZE, IMAGE_SIZE))
         path = self.modelPath +"/"+ str(self.recognitron.__class__.__name__ ) +  str(self.recognitron.activation.__class__.__name__)
         torch_out = torch.onnx._export(self.recognitron, x, path + "_" + model + ".onnx", export_params=True)
@@ -236,28 +237,18 @@ class DeepImageRecognition(object):
 class MultiLabelLoss(torch.nn.Module):
     def __init__(self):
         super(MultiLabelLoss, self).__init__()
-        self.criterion = torch.nn.BCELoss()
-        self.penalty = torch.nn.MSELoss()
         self.loss = None
 
-    def forward(self, input, target):
-        p = input.data.cpu().numpy()
-        t = target.data.cpu().numpy()
-        positive_input = Variable(torch.from_numpy(p[np.nonzero(t)]))
-        positive_target = Variable(torch.from_numpy(t[np.nonzero(t)]))
-        negative_input = Variable(torch.from_numpy(p[np.where(t == 0)]))
-        negative_target = Variable(torch.from_numpy(t[np.where(t == 0)]))
-        if torch.cuda.is_available():
-            positive_input  = positive_input .cuda()
-            positive_target = positive_target.cuda()
-            negative_input  = negative_input .cuda()
-            negative_target = negative_target.cuda()
-
-        bce_loss = self.criterion(input, target)
-        false_positive_penalty = self.penalty(positive_input, positive_target)
-        false_negative_penalty= self.penalty(negative_input, negative_target)
-        self.loss =  bce_loss + 0.1*false_negative_penalty + 0.1*false_positive_penalty
+    def forward(self, actual, desire):
+        smooth = 1e-6
+        length = desire.size(0)
+        m1 = actual.view(length, -1)
+        m2 = desire.view(length, -1)
+        intersection = (m1 * m2)
+        score = 2. * (intersection.sum(1) + smooth) / (m1.sum(1) + m2.sum(1) + smooth)
+        self.loss = 1 - score.sum() / length
         return self.loss
+
 
     def backward(self, retain_variables=True):
         return self.loss.backward(retain_variables=retain_variables)

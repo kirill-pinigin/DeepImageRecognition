@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 from NeuralModels import SILU, Perceptron
-from DeepImageRecognition import IMAGE_SIZE
-
+from DeepImageRecognition import DIMENSION, CHANNELS, IMAGE_SIZE
 import math
 
 LATENT_SPACE = 512
@@ -140,16 +139,16 @@ def mobile_net_v2(dimension=1000, channels = 3, input_size=224, width_mult=1., p
 
 
 class MobileRecognitron(nn.Module):
-    def __init__(self, channels=3, dimension=1, activation=SILU(), pretrained=True):
+    def __init__(self,  activation=SILU(), pretrained=True):
         super(MobileRecognitron, self).__init__()
         self.activation = activation
-        base_model = mobile_net_v2(dimension=dimension, channels = channels, input_size=IMAGE_SIZE, width_mult=1., pretrained = pretrained)
+        base_model = mobile_net_v2(dimension=DIMENSION, channels = CHANNELS, input_size=IMAGE_SIZE, width_mult=1., pretrained = pretrained)
         base_model = nn.Sequential(*list(base_model.children())[:-1])
-        conv = nn.Conv2d(channels, 32, kernel_size=3, stride=2, padding=3, bias=False)
-        weight = torch.FloatTensor(32, channels, 3, 3)
+        conv = nn.Conv2d(CHANNELS, 32, kernel_size=3, stride=2, padding=3, bias=False)
+        weight = torch.FloatTensor(32, CHANNELS, 3, 3)
         parameters = list(base_model.parameters())
         for i in range(32):
-            if channels == 1:
+            if CHANNELS == 1:
                 weight[i, :, :, :] = parameters[0].data[i].mean(0)
             else:
                 weight[i, :, :, :] = parameters[0].data[i]
@@ -162,22 +161,22 @@ class MobileRecognitron(nn.Module):
 
         self.features = base_model
         self.features[0][0]= conv
+        '''
         self.features[0][18] = InvertedResidual(320, 512, 2, 6, activation)
         self.features[0][19] = conv_1x1_bn(512, 512)
         self.features[0].add_module('final_avg', nn.AvgPool2d(IMAGE_SIZE // 64))
-
+        '''
         self.recognitron = nn.Sequential(
-            Perceptron(512, 512),
-            nn.Dropout(p=0.5),
+            Perceptron(1280, 1280),
+            nn.Dropout(p=0),
             activation,
-            Perceptron( 512, dimension),
-            nn.Sigmoid(),
+            Perceptron( 1280, DIMENSION),
         )
 
     def forward(self, x):
         x = self.features(x)
         x = self.recognitron(x)
-        return x
+        return torch.sigmoid(x)
 
     def freeze(self):
         for param in self.features.parameters():
@@ -192,7 +191,7 @@ class MobileRecognitron(nn.Module):
     def get_dropout(self):
         return self.recognitron[1].p
 
-    def set_dropout(self, proba = 0):
+    def set_dropout(self, proba = 0.5):
         if proba < 0:
             proba = 0
         if proba > 0.99:
