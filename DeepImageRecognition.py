@@ -21,14 +21,27 @@ class JacardAccuracy(torch.nn.Module):
         super(JacardAccuracy, self).__init__()
 
     def forward(self, actual, desire):
-        smooth = 1e-6
-        actual = torch.round(actual)
-        length = actual.size(0)
-        m1 = actual.view(length, -1)  # Flatten
-        m2 = desire.view(length, -1)  # Flatten
-        intersection = (m1 * m2).sum()
-        union = m1.sum() + m2.sum() - intersection
-        return (intersection + smooth) / (union + smooth)
+        intersection = (actual * desire).sum()
+        union = actual.sum() + desire.sum() - intersection
+        return (intersection + 1e-6) / (union + 1e-6)
+
+
+class MultiLabelLoss(torch.nn.Module):
+    def __init__(self):
+        super(MultiLabelLoss, self).__init__()
+        self.loss = None
+
+    def forward(self, actual, desire):
+        length = desire.size(0)
+        intersection = (actual * desire)
+        score = float(2.0) * (intersection.sum(1) + 1e-6) / (actual.sum(1) + desire.sum(1) + 1e-6)
+        self.loss = float(1.0) - score.sum() / float(length)
+        return self.loss
+
+
+    def backward(self, retain_variables=True):
+        return self.loss.backward(retain_variables=retain_variables)
+
 
 
 class DeepImageRecognition(object):
@@ -165,7 +178,7 @@ class DeepImageRecognition(object):
                 if dropout_factor > 0 and dropout_factor < 1 and probas < 0.99:
                     print('! Increase DropOut value !', probas)
                     probas += 0.1
-                    self.recognitron.set_dropout(probas)
+                    #self.recognitron.set_dropout(probas)
 
                 counter = 0
                 degradation += 1
@@ -232,23 +245,3 @@ class DeepImageRecognition(object):
 
         if self.use_gpu:
             self.recognitron = self.recognitron.cuda()
-
-
-class MultiLabelLoss(torch.nn.Module):
-    def __init__(self):
-        super(MultiLabelLoss, self).__init__()
-        self.loss = None
-
-    def forward(self, actual, desire):
-        smooth = 1e-6
-        length = desire.size(0)
-        m1 = actual.view(length, -1)
-        m2 = desire.view(length, -1)
-        intersection = (m1 * m2)
-        score = 2. * (intersection.sum(1) + smooth) / (m1.sum(1) + m2.sum(1) + smooth)
-        self.loss = 1 - score.sum() / length
-        return self.loss
-
-
-    def backward(self, retain_variables=True):
-        return self.loss.backward(retain_variables=retain_variables)

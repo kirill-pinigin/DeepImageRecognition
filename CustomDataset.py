@@ -31,15 +31,15 @@ class CSVDataset(Dataset):
     def __init__(self, image_dir, csv_path,  augmentation: bool = False):
         self.image_dir = image_dir
         transforms_list = [
-            torchvision.transforms.CenterCrop(IMAGE_SIZE),
+            torchvision.transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
             torchvision.transforms.ToTensor(),
         ]
 
         if augmentation:
             transforms_list = [
                                   torchvision.transforms.RandomHorizontalFlip(),
-                                  torchvision.transforms.ColorJitter(0.2, 0.2, 0.1),
-                                  torchvision.transforms.RandomRotation(10),
+                                  #torchvision.transforms.ColorJitter(0.2, 0.2, 0.1),
+                                  #torchvision.transforms.RandomRotation(10),
                               ] + transforms_list
 
         self.transforms = torchvision.transforms.Compose(transforms_list)
