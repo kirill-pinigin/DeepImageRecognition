@@ -6,8 +6,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from  CustomDataset import  CustomDataset
 
-from DeepImageRecognition import DeepImageRecognition , MultiLabelLoss,  IMAGE_SIZE, CHANNELS, DIMENSION
-from NeuralModels import SILU
+from DeepImageRecognition import DeepImageRecognition , MultiLabelLoss
 from ResidualRecognitron import  ResidualRecognitron
 from MobileRecognitron import MobileRecognitron
 
@@ -18,9 +17,8 @@ parser.add_argument('--recognitron',       type = str,   default='ResidualRecogn
 parser.add_argument('--activation',        type = str,   default='LeakyReLU', help='type of activation')
 parser.add_argument('--criterion',         type = str,   default='MultiLabelLoss', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
-parser.add_argument('--type_norm',         type = str,   default='batch', help='type of optimizer')
 parser.add_argument('--lr',                type = float, default=1e-3)
-parser.add_argument('--weight_decay',      type = float, default=1e-3)
+parser.add_argument('--weight_decay',      type = float, default=0)
 parser.add_argument('--dropout',           type = float, default=0.0)
 parser.add_argument('--batch_size',        type = int,   default=128)
 parser.add_argument('--epochs',            type = int,   default=64)
