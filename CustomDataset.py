@@ -38,8 +38,8 @@ class CSVDataset(Dataset):
         if augmentation:
             transforms_list = [
                                   torchvision.transforms.RandomHorizontalFlip(),
-                                  #torchvision.transforms.ColorJitter(0.2, 0.2, 0.1),
-                                  #torchvision.transforms.RandomRotation(10),
+                                  torchvision.transforms.ColorJitter(0.2, 0.2, 0.1),
+                                  torchvision.transforms.RandomRotation(10),
                               ] + transforms_list
 
         self.transforms = torchvision.transforms.Compose(transforms_list)

@@ -16,14 +16,19 @@ DEGRADATION_TOLERANCY = 7
 ACCURACY_TRESHOLD = float(0.0625)
 
 
-class JacardAccuracy(torch.nn.Module):
+class IoUBinaryAccuray(torch.nn.Module):
     def __init__(self):
-        super(JacardAccuracy, self).__init__()
+        super(IoUBinaryAccuray, self).__init__()
 
     def forward(self, actual, desire):
-        intersection = (actual * desire).sum()
-        union = actual.sum() + desire.sum() - intersection
-        return (intersection + 1e-6) / (union + 1e-6)
+        length = desire.size(0)
+        actual = torch.round(actual)
+        actual = actual.view(length, -1).byte()
+        desire = desire.view(length, -1).byte()
+        intersection = (actual & desire).float().sum()
+        union = (actual | desire).float().sum()
+        iou = (intersection + 1e-6) / (union + 1e-6)
+        return iou.mean()
 
 
 class MultiLabelLoss(torch.nn.Module):
@@ -48,7 +53,7 @@ class DeepImageRecognition(object):
     def __init__(self, recognitron,  criterion, optimizer, directory):
         self.recognitron = recognitron
         self.criterion = criterion
-        self.accuracy = JacardAccuracy()
+        self.accuracy = IoUBinaryAccuray()
         self.optimizer = optimizer
         self.use_gpu = torch.cuda.is_available()
         self.dispersion = 1.0
