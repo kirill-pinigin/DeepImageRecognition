@@ -14,11 +14,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir',          type = str,   default='./CocoDatasetTags/', help='path to dataset')
 parser.add_argument('--result_dir',        type = str,   default='./RESULTS/', help='path to result')
 parser.add_argument('--recognitron',       type = str,   default='ResidualRecognitron', help='type of image generator')
-parser.add_argument('--activation',        type = str,   default='LeakyReLU', help='type of activation')
-parser.add_argument('--criterion',         type = str,   default='MultiLabelLoss', help='type of criterion')
+parser.add_argument('--activation',        type = str,   default='ReLU', help='type of activation')
+parser.add_argument('--criterion',         type = str,   default='BCE', help='type of criterion')
 parser.add_argument('--optimizer',         type = str,   default='Adam', help='type of optimizer')
-parser.add_argument('--lr',                type = float, default=1e-3)
-parser.add_argument('--weight_decay',      type = float, default=0)
+parser.add_argument('--lr',                type = float, default=1e-4)
+parser.add_argument('--weight_decay',      type = float, default=1e-4)
 parser.add_argument('--dropout',           type = float, default=0.0)
 parser.add_argument('--batch_size',        type = int,   default=128)
 parser.add_argument('--epochs',            type = int,   default=64)
@@ -39,7 +39,6 @@ activation_types =  {
                         'PReLU'    : nn.PReLU(),
                         'ELU'      : nn.ELU(),
                         'SELU'     : nn.SELU(),
-                        'SILU'     : SILU()
                     }
 
 criterion_types =   {
@@ -59,8 +58,7 @@ model = (recognitron_types[args.recognitron] if args.recognitron in recognitron_
 
 function = (activation_types[args.activation] if args.activation in activation_types else activation_types['ReLU'])
 
-recognitron = model(activation=function,
-                    pretrained=args.pretrained + args.transfer)
+recognitron = model(activation=function, pretrained=args.pretrained + args.transfer)
 
 optimizer =(optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr, weight_decay = args.weight_decay)
 
@@ -78,6 +76,7 @@ testloader =  torch.utils.data.DataLoader(image_datasets['val'], batch_size=1, s
 
 framework = DeepImageRecognition(recognitron = recognitron, criterion = criterion, optimizer = optimizer, directory = args.result_dir)
 framework.save("FAKE")
+
 if args.transfer:
     framework.recognitron.freeze()
     framework.optimizer = (optimizer_types[args.optimizer] if args.optimizer in optimizer_types else optimizer_types['Adam'])(recognitron.parameters(), lr = args.lr / 2, weight_decay = args.weight_decay)

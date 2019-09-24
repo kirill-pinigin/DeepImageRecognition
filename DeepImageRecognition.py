@@ -3,8 +3,6 @@ import sys
 import os
 import torch
 from torch.autograd import Variable
-import torchvision
-import numpy as np
 
 IMAGE_SIZE = 256
 CHANNELS = 3
@@ -40,7 +38,7 @@ class MultiLabelLoss(torch.nn.Module):
         length = desire.size(0)
         intersection = (actual * desire)
         score = float(2.0) * (intersection.sum(1) + 1e-6) / (actual.sum(1) + desire.sum(1) + 1e-6)
-        self.loss = float(1.0) - score.sum() / float(length)
+        self.loss = torch.nn.functional.binary_cross_entropy(actual, desire) + float(1.0)  - score.sum() / float(length)
         return self.loss
 
 

@@ -4,9 +4,11 @@ from PIL import Image
 import os
 import torchvision
 import torch
+import random
 
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
+from PIL import ImageFilter, ImageEnhance, Image
 
 from DeepImageRecognition import DIMENSION, CHANNELS, IMAGE_SIZE
 
@@ -37,9 +39,13 @@ class CSVDataset(Dataset):
 
         if augmentation:
             transforms_list = [
+                                  torchvision.transforms.RandomAffine(degrees=(-30, 30), scale=(0.8, 1.2), resample=Image.BICUBIC),
+                                  torchvision.transforms.Resize((int(IMAGE_SIZE * 1.055), int(IMAGE_SIZE * 1.055)), interpolation=3),
+                                  torchvision.transforms.RandomCrop((IMAGE_SIZE, IMAGE_SIZE)),
                                   torchvision.transforms.RandomHorizontalFlip(),
-                                  torchvision.transforms.ColorJitter(0.2, 0.2, 0.1),
-                                  torchvision.transforms.RandomRotation(10),
+                                  torchvision.transforms.ColorJitter(0.2, 0.2, 0.2),
+                                  RandomNoise(),
+                                  RandomBlur(),
                               ] + transforms_list
 
         self.transforms = torchvision.transforms.Compose(transforms_list)
@@ -144,6 +150,68 @@ class FolderDataset(Dataset):
         tmp = '    Target Transforms (if any): '
         fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
         return fmt_str
+
+
+class RandomBlur(object):
+    def __init__(self):
+        self.blurring_filters = [ImageFilter.GaussianBlur, ImageFilter.BoxBlur]
+        self.radius = [0, 1]
+
+    def __call__(self, input):
+        index = int(random.uniform(0,  len(self.blurring_filters)))
+        radius = np.random.choice(self.radius)
+        blurring_filter = self.blurring_filters[index](radius)
+        return input.filter(blurring_filter)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(p={})'.format(self.blurring_filters)
+
+class RandomNoise(object):
+    def __init__(self):
+        self.noises = [GaussianNoise, UniformNoise]
+        self.factors = [0,0.02]
+
+    def __call__(self, input):
+        factor = np.random.choice(self.factors)
+        index = int(random.uniform(0, len(self.noises)))
+        noise = self.noises[index](factor)
+        return noise(input)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(p={})'.format(self.noises)
+
+
+class GaussianNoise(object):
+    def __init__(self, factor: float = 0.1):
+        self.factor = factor
+
+    def __call__(self, input):
+        img = np.array(input)
+        img = img.astype(dtype=np.float32)
+        noisy_img = img + np.random.normal(0.0, 255.0 * self.factor, img.shape)
+        noisy_img = np.clip(noisy_img, 0.0, 255.0)
+        noisy_img = noisy_img.astype(dtype=np.uint8)
+        return Image.fromarray(noisy_img)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(p={})'.format(self.factor)
+
+
+class UniformNoise(object):
+    def __init__(self, factor: float = 0.1):
+        self.factor = factor
+
+    def __call__(self, input):
+        img = np.array(input)
+        img = img.astype(dtype=np.float32)
+        noisy_img = img + np.random.uniform(0.0, 255.0 * self.factor, img.shape)
+        noisy_img = np.clip(noisy_img, 0.0, 255.0)
+        noisy_img = noisy_img.astype(dtype=np.uint8)
+        return Image.fromarray(noisy_img)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(p={})'.format(self.factor)
+
 
 
 def make_dataloaders (dataset, batch_size, splitratio = 0.2):
